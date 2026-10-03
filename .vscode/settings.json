@@ -1,0 +1,11 @@
+{
+  // Teach the Red Hat YAML extension ESPHome's custom tags so it stops
+  // flagging them as errors. ESPHome itself validates the values.
+  "yaml.customTags": [
+    "!secret scalar",
+    "!include scalar",
+    "!lambda scalar",
+    "!extend scalar",
+    "!remove scalar"
+  ]
+}

@@ -1,0 +1,120 @@
+# =====================================================================
+#  Safer Laundry - example Home Assistant automations
+#
+#  Paste into automations.yaml, or create each one in the UI:
+#  Settings > Automations & scenes > Create automation > three-dot menu
+#  > Edit in YAML.
+#
+#  CHANGE before use (search this file for "CHANGE"):
+#    binary_sensor.safer_laundry_*   your device's entity IDs (Settings >
+#                                    Devices & services > ESPHome)
+#    notify.mobile_app_your_phone    your phone's notify action (Developer
+#                                    tools > Actions, search "mobile_app")
+#    media_player.your_speaker       the speaker that plays the alarm
+#    media_content_id                pick the track in the UI's media
+#                                    picker; it fills in the real value
+#
+#  The snapshot/restore actions are Sonos-specific. For other speakers,
+#  delete the sonos.snapshot and sonos.restore actions.
+# =====================================================================
+
+- id: safer_laundry_leak_alarm
+  alias: "Laundry leak - alarm"
+  description: "Notify the phone and play an alarm track on a speaker"
+  mode: single
+  triggers:
+    - trigger: state
+      entity_id: binary_sensor.safer_laundry_leak_trip   # CHANGE
+      to: "on"
+  actions:
+    # Save what the speaker was doing, to put back afterwards.
+    - action: sonos.snapshot
+      data:
+        entity_id: media_player.your_speaker   # CHANGE
+        with_group: true
+
+    # Phone alert with a reset button.
+    - action: notify.mobile_app_your_phone   # CHANGE
+      data:
+        title: "Water under the washer"
+        message: "Laundry leak sensor tripped at {{ now().strftime('%-I:%M %p') }}."
+        data:
+          tag: laundry_leak
+          actions:
+            - action: RESET_LAUNDRY_LEAK
+              title: "Floor is dry - reset"
+          # iPhone: bypass silent mode (uncomment)
+          # push:
+          #   sound:
+          #     name: default
+          #     critical: 1
+          #     volume: 1.0
+          # Android: use the alarm stream (uncomment)
+          # ttl: 0
+          # priority: high
+          # channel: alarm_stream
+
+    - action: media_player.volume_set
+      target:
+        entity_id: media_player.your_speaker   # CHANGE
+      data:
+        volume_level: 0.6
+
+    - action: media_player.play_media
+      target:
+        entity_id: media_player.your_speaker   # CHANGE
+      data:
+        media_content_type: favorite_item_id
+        media_content_id: "FV:2/XX"   # CHANGE - pick it in the UI
+
+- id: safer_laundry_leak_cleared
+  alias: "Laundry leak - cleared"
+  description: "Stop the alarm and restore the speaker when the trip is reset"
+  mode: single
+  triggers:
+    - trigger: state
+      entity_id: binary_sensor.safer_laundry_leak_trip   # CHANGE
+      from: "on"
+      to: "off"
+  actions:
+    - action: media_player.media_stop
+      target:
+        entity_id: media_player.your_speaker   # CHANGE
+    - action: sonos.restore
+      data:
+        entity_id: media_player.your_speaker   # CHANGE
+        with_group: true
+    - action: notify.mobile_app_your_phone   # CHANGE
+      data:
+        message: clear_notification
+        data:
+          tag: laundry_leak
+
+- id: safer_laundry_reset_from_phone
+  alias: "Laundry leak - reset from notification"
+  description: "The notification's reset button presses the device's reset (clears only once probes read dry)"
+  mode: single
+  triggers:
+    - trigger: event
+      event_type: mobile_app_notification_action
+      event_data:
+        action: RESET_LAUNDRY_LEAK
+  actions:
+    - action: button.press
+      target:
+        entity_id: button.safer_laundry_reset_leak_trip   # CHANGE
+
+- id: safer_laundry_monitor_offline
+  alias: "Laundry leak - monitor offline"
+  description: "A leak monitor that silently died is worse than none"
+  mode: single
+  triggers:
+    - trigger: state
+      entity_id: binary_sensor.safer_laundry_laundry_monitor_online   # CHANGE
+      to: "off"
+      for: "00:05:00"
+  actions:
+    - action: notify.mobile_app_your_phone   # CHANGE
+      data:
+        title: "Laundry leak monitor offline"
+        message: "It has been offline for 5 minutes - check power and Wi-Fi."

@@ -1,0 +1,26 @@
+# =====================================================================
+#  Optional: remote reset wires
+#  Run two wires from GPIO4 and GND to somewhere easy to reach (beside
+#  the washer controls, for example). Touch them together for 1-5 s to
+#  reset the leak trip. Like the other resets, it only clears once both
+#  probes read dry.
+#
+#  Leave out by commenting the remote_reset line in safer-laundry.yaml.
+# =====================================================================
+
+binary_sensor:
+  - platform: gpio
+    name: "Reset Button Remote"
+    pin:
+      number: GPIO4
+      inverted: true
+      mode:
+        input: true
+        pullup: true
+    filters:
+      - delayed_on: 50ms
+    on_click:
+      min_length: 1s
+      max_length: 5s
+      then:
+        - button.press: reset_leak_trip

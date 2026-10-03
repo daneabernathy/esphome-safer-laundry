@@ -1,0 +1,33 @@
+# Compiles the firmware on every push and pull request, so a change that
+# breaks the build is caught before anyone flashes it.
+name: Build
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # The real secrets.yaml is never committed. CI only needs values of
+      # the right shape, including a freshly generated encryption key.
+      - name: Create placeholder secrets.yaml
+        run: |
+          cat > secrets.yaml <<EOF
+          wifi_ssid: "ci-placeholder"
+          wifi_password: "ci-placeholder"
+          api_encryption_key: "$(openssl rand -base64 32)"
+          fallback_ap_password: "safer-laundry"
+          EOF
+
+      - name: Compile
+        uses: esphome/build-action@v7.0.0
+        with:
+          yaml-file: safer-laundry.yaml

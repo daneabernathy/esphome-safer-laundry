@@ -1,0 +1,15 @@
+# ESPHome build output and cache
+/.esphome/
+
+# Real credentials. Commit secrets.example.yaml instead.
+secrets.yaml
+
+# Python virtual environments, if ESPHome is installed in the repo
+.venv/
+venv/
+
+# OS and editor clutter
+.DS_Store
+Thumbs.db
+desktop.ini
+*.swp

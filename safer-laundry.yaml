@@ -1,0 +1,179 @@
+# =====================================================================
+#  Safer Laundry - water leak monitor for under a washing machine
+#  Board: ESP32 DevKit V1 (esp32dev)          https://esphome.io
+#
+#  Needs secrets.yaml in this folder: copy secrets.example.yaml to
+#  secrets.yaml and fill it in. See README.md for wiring and setup.
+#
+#  Pins used
+#    GPIO32  front leak probe      (bare ground wire alongside)
+#    GPIO33  back leak probe       (bare ground wire alongside)
+#    GPIO2   onboard blue LED      (on while a leak trip is latched)
+#    GPIO0   BOOT button           (hold 1-5 s to reset the trip)
+#    GPIO4   remote reset wire     (optional package, see below)
+# =====================================================================
+
+substitutions:
+  name: safer-laundry
+  friendly_name: Safer Laundry
+  # Touch reading below which a probe counts as wet. Calibrate for your
+  # probes: set esp32_touch setup_mode to true and watch the logs dry
+  # and wet (README.md, "Calibrating the probes").
+  front_probe_threshold: "700"
+  back_probe_threshold: "700"
+
+# Optional features. Comment out a line to build without that feature.
+packages:
+  remote_reset: !include packages/remote-reset.yaml
+  bluetooth_proxy: !include packages/bluetooth-proxy.yaml
+
+esphome:
+  name: ${name}
+  friendly_name: ${friendly_name}
+  project:
+    name: daneabernathy.safer-laundry
+    version: "0.1.0"
+
+esp32:
+  board: esp32dev
+  framework:
+    type: esp-idf
+
+logger:
+
+api:
+  encryption:
+    key: !secret api_encryption_key
+
+# No OTA password: the API encryption key already authenticates uploads
+# from Home Assistant, and ESPHome warns that a password wastes flash.
+ota:
+  - platform: esphome
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  # If the board can't join Wi-Fi it starts this hotspot; connect to it
+  # and the captive portal lets you enter new Wi-Fi details.
+  ap:
+    ssid: "${friendly_name} Fallback"
+    password: !secret fallback_ap_password
+
+captive_portal:
+
+# ---------------------------------------------------------------------
+#  Latched leak trip
+# ---------------------------------------------------------------------
+globals:
+  - id: leak_tripped
+    type: bool
+    restore_value: true       # a reboot or power blip doesn't clear a trip
+    initial_value: 'false'
+
+button:
+  - platform: template
+    name: "Reset Leak Trip"
+    id: reset_leak_trip
+    icon: mdi:water-check
+    on_press:
+      # Only clears once both probes read dry.
+      - if:
+          condition:
+            binary_sensor.is_off: laundry_leak
+          then:
+            - globals.set:
+                id: leak_tripped
+                value: 'false'
+
+# ---------------------------------------------------------------------
+#  Onboard LED: on while the leak trip is latched
+# ---------------------------------------------------------------------
+output:
+  - platform: gpio
+    id: onboard_led
+    pin:
+      number: GPIO2
+      ignore_strapping_warning: true
+
+interval:
+  - interval: 1s
+    then:
+      - if:
+          condition:
+            lambda: 'return id(leak_tripped);'
+          then:
+            - output.turn_on: onboard_led
+          else:
+            - output.turn_off: onboard_led
+
+# ---------------------------------------------------------------------
+#  Leak probes
+# ---------------------------------------------------------------------
+esp32_touch:
+  setup_mode: false       # set true to see raw readings in the log
+
+binary_sensor:
+  - platform: esp32_touch
+    name: "Washer Leak Front"
+    id: leak_front
+    device_class: moisture
+    pin: GPIO32
+    threshold: ${front_probe_threshold}
+    filters:
+      - delayed_on: 2s
+      - delayed_off: 30s
+
+  - platform: esp32_touch
+    name: "Washer Leak Back"
+    id: leak_back
+    device_class: moisture
+    pin: GPIO33
+    threshold: ${back_probe_threshold}
+    filters:
+      - delayed_on: 2s
+      - delayed_off: 30s
+
+  - platform: template
+    name: "Laundry Water Leak"
+    id: laundry_leak
+    device_class: moisture
+    lambda: |-
+      return id(leak_front).state || id(leak_back).state;
+    on_press:
+      - globals.set:
+          id: leak_tripped
+          value: 'true'
+
+  # Latched trip: stays ON after the floor dries, until it is reset.
+  - platform: template
+    name: "Leak Trip"
+    id: leak_trip
+    device_class: problem
+    lambda: |-
+      return id(leak_tripped);
+
+  - platform: status
+    name: "Laundry Monitor Online"
+
+  # Reset: BOOT button on the board (hold 1-5 s)
+  - platform: gpio
+    name: "Reset Button Board"
+    pin:
+      number: GPIO0
+      inverted: true
+      ignore_strapping_warning: true
+      mode:
+        input: true
+        pullup: true
+    filters:
+      - delayed_on: 50ms
+    on_click:
+      min_length: 1s
+      max_length: 5s
+      then:
+        - button.press: reset_leak_trip
+
+sensor:
+  - platform: wifi_signal
+    name: "WiFi Signal"
+    update_interval: 60s

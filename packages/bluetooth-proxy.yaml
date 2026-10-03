@@ -1,0 +1,17 @@
+# =====================================================================
+#  Optional: Bluetooth proxy
+#  Relays nearby Bluetooth devices (sensors, locks, trackers) to Home
+#  Assistant, extending its Bluetooth range to the laundry room.
+#  https://esphome.io/components/bluetooth_proxy/
+#
+#  Costs flash and RAM (the full build uses about 70% of flash). Leave
+#  out by commenting the bluetooth_proxy line in safer-laundry.yaml,
+#  and do that first if the device ever becomes unstable.
+# =====================================================================
+
+esp32_ble_tracker:
+  scan_parameters:
+    active: true
+
+bluetooth_proxy:
+  active: true

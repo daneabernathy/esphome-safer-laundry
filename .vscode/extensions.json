@@ -1,0 +1,8 @@
+{
+  // Suggested when this folder is opened in VS Code.
+  "recommendations": [
+    "esphome.esphome-vscode",
+    "redhat.vscode-yaml",
+    "editorconfig.editorconfig"
+  ]
+}

@@ -1,0 +1,3 @@
+# Normalise line endings in the repository; check out with LF so YAML
+# behaves the same on Windows, macOS, Linux and in Home Assistant.
+* text=auto eol=lf
