@@ -9,8 +9,19 @@ When water bridges a probe for 2 seconds, Home Assistant gets a
 **Laundry Water Leak** alert and a **Leak Trip** that stays latched,
 even across reboots, until someone resets it once the floor is dry.
 
-> **Status:** compiles with ESPHome 2026.9.1, not yet tested on hardware
-> in this form. See [CHANGELOG.md](CHANGELOG.md).
+## Status
+
+| Check | Result |
+| --- | --- |
+| Config validates (ESPHome 2026.9.1) | ✅ |
+| Firmware compiles, all packages on (ESPHome 2026.9.1) | ✅ |
+| GitHub Actions build | ❌ Not run yet |
+| Leak probes and latched trip on hardware | ❌ Not tested in this version |
+| BOOT button and remote wire reset on hardware | ❌ Not tested |
+| Bluetooth proxy on hardware | ❌ Not tested |
+
+An earlier, simpler version (probes, latch and reset button only) has
+run on the author's board. See [CHANGELOG.md](CHANGELOG.md) for changes.
 
 ## Features
 
@@ -127,6 +138,15 @@ marked `CHANGE` before using them.
 Issues and pull requests are welcome. Please run
 `esphome config safer-laundry.yaml` before opening a pull request; the
 GitHub Actions workflow also compiles every change.
+
+## Acknowledgements
+
+Written by Dane Abernathy with help from
+[Claude](https://www.anthropic.com/claude) (Anthropic), used through
+Claude Code to draft configuration and documentation. Commits Claude
+helped write carry a `Co-Authored-By: Claude` trailer. Every change is
+reviewed by the maintainer; the Status table shows what has been tested
+on real hardware.
 
 ## License
 

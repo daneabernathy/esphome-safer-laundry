@@ -13,3 +13,10 @@ venv/
 Thumbs.db
 desktop.ini
 *.swp
+
+# Downloaded or exported firmware images
+*.bin
+*.elf
+
+# Personal Claude Code settings
+.claude/settings.local.json
